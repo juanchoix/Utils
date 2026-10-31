@@ -1,0 +1,124 @@
+
+class SU_Oneliner {
+  /// the tag is not used in the display logic, but can be used to identify
+  /// oneliners that belong to your code vs oneliners that don't.
+  var tag: string;
+
+  var id: int;
+  default id = -1;
+
+  var text: string;
+  var visible: bool;
+  var position: Vector;
+  var offset: Vector;
+
+  /// if set to a value above 0, will be used as a maximum render distance for
+  /// the OL.
+  var render_distance: int;
+
+  var is_registered: bool;
+
+  default visible = true;
+
+  private var cached_manager: SUOL_Manager;
+  function getManager(): SUOL_Manager {
+    if (!this.cached_manager) {
+      this.cached_manager = SUOL_getManager();
+    }
+
+    return this.cached_manager;
+  }
+
+  function register() {
+    // this.is_registered is modified by the manager's methods
+    this.getManager().createOneliner(this);
+  }
+
+  function unregister() {
+    // this.is_registered is modified by the manager's methods
+    this.getManager().deleteOneliner(this);
+  }
+
+  function update() {
+    this.getManager().updateOneliner(this);
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  public function setRenderDistance(value: int): SU_Oneliner {
+    this.render_distance = value;
+
+    return this;
+  }
+
+  public function setText(value: string): SU_Oneliner {
+    this.text = value;
+
+    return this;
+  }
+
+  public function setOffset(value: Vector): SU_Oneliner {
+    this.offset = value;
+
+    return this;
+  }
+
+  public function setTag(value: string): SU_Oneliner {
+    this.tag = value;
+
+    return this;
+  }
+
+  /// it's public but obviously if you need to modify the opacity, use the
+  /// [setOpacity] method for that. Considering OLs run every frame, getter
+  /// functions just to get float values are better avoided for performance
+  /// reasons.
+  public var opacity: float;
+
+  /// Expects a value in the [0;1] range.
+  public function setOpacity(value: float): SU_Oneliner {
+    if (value == this.opacity) {
+      return this;
+    }
+
+    this.opacity = value;
+    this.getManager().setOnelinerOpacity(this, value);
+
+    return this;
+  }
+
+  //////////////////////////////////////////////////////////////////////////////
+
+  function getVisible(player_position: Vector): bool {
+    if (this.render_distance <= 0) {
+      return this.visible;
+    }
+
+    return VecDistanceSquared2D(
+      player_position,
+      this.getPosition()
+    ) <= this.render_distance * this.render_distance;
+  }
+
+  function getPosition(): Vector {
+    return this.position + this.offset;
+  }
+
+  /// caches the normalized ([0;1] range) screen positions of the last time the
+  /// oneliner was in the Field Of View.
+  public var cached_screen_position: Vector;
+  function getScreenPosition(hud: CR4ScriptedHud, out screen_position: Vector): bool {
+    var world_position: Vector;
+    var result: bool;
+
+    world_position = this.getPosition();
+    result = SUOL_worldToScreenPosition(
+      hud,
+      world_position,
+      screen_position,
+      this.cached_screen_position
+    );
+
+    return result;
+  }
+}
